@@ -9,6 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import VoiceSelector from './VoiceSelector'
+import { useAuth } from '@clerk/nextjs'
+import { toast } from 'sonner'
+import { checkBookExists, createBook, saveBookSegments } from '@/lib/actions/book.actions'
+import { useRouter } from 'next/navigation'
+import { parsePDFFile } from '@/lib/utils'
+import { upload } from '@vercel/blob/client'
 
 // Zod validation schema
 const formSchema = z.object({
@@ -22,7 +28,9 @@ const formSchema = z.object({
   coverImage: z.instanceof(File).optional().nullable(),
   title: z.string().min(1, 'Title is required').min(3, 'Title must be at least 3 characters'),
   author: z.string().min(1, 'Author is required').min(3, 'Author must be at least 3 characters'),
-  voiceId: z.string().min(1, 'Voice selection is required'),
+  persona: z.string().min(1, 'Voice selection is required'),
+
+  length: z.int64().optional().nullable(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -33,6 +41,8 @@ const UploadForm = () => {
   const [coverImagePreview, setCoverImagePreview] = useState<string>('')
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const { userId } = useAuth();
+  const router = useRouter();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -76,17 +86,93 @@ const UploadForm = () => {
   }
 
   const onSubmit = async (data: FormData) => {
-    try {
-      setIsSubmitting(true)
-      // Handle form submission here
-      console.log('Form data:', data)
-      // API call would go here
-      await new Promise((resolve) => setTimeout(resolve, 2000)) // Simulate API call
-    } catch (error) {
-      console.error('Error submitting form:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
+      if (!userId) {
+        return toast.error("You need to login (authenticate) before being able to upload a book")
+      }
+
+      setIsSubmitting(true);
+
+      try {
+        const bookExists = await checkBookExists(data.title);
+        if (bookExists.exists && bookExists.book) {
+          toast.info("A book with this title already exists..");
+          form.reset();
+          router.push(`/books/${bookExists.book.slug}`);
+          return;
+        }
+
+        const FileTitle = data.title.replace(/\s+/g, '-').toLowerCase();
+        const pdfFile = data.pdfFile;
+
+        const parsePDF = await parsePDFFile(pdfFile);
+
+        if (parsePDF.content.length === 0){
+          toast.error("Could not extract any text content from the PDF. Please make sure the PDF is not scanned as an image and try again.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const uploadPDFBlob = await upload(FileTitle, pdfFile, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: 'application/pdf',
+        })
+
+        let coverUrl: string;
+        if (data.coverImage) {
+          const coverFile = data.coverImage;
+          const uploadCoverBlob = await upload(`${FileTitle}-cover.png`, coverFile, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+            contentType: coverFile.type,
+          })
+          coverUrl = uploadCoverBlob.url;
+        } else {
+          const response = await fetch(parsePDF.cover);
+          const blob = await response.blob();
+          const uploadCoverBlob = await upload(`${FileTitle}-cover.png`, blob, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+            contentType: 'image/png',
+          })
+          coverUrl = uploadCoverBlob.url;
+        }
+
+        const book = await createBook({
+          clerkId: userId,
+          title: data.title,
+          author: data.author,
+          persona: data.persona,
+          fileURL: uploadPDFBlob.url,
+          fileBlobKey: uploadPDFBlob.pathname,
+          coverURL: coverUrl,
+          fileSize: pdfFile.size,
+        })
+
+        if (!book.success) throw new Error("Could not create book");
+
+        if (book.alreadyExists) {
+          toast.info("A book with this title already exists.");
+          form.reset();
+          router.push(`/books/${book.data.slug}`);
+          return;
+        }
+
+        const segments = await saveBookSegments(book.data._id, userId, parsePDF.content);
+
+        if (!segments.success) {
+          toast.error("Could not save your book segments");
+          throw new Error("Could not save book segments");
+        }
+
+        form.reset();
+        router.push("/");
+      } catch (error) {
+        toast.error("Could not process your book")
+      } finally {
+        setIsSubmitting(false)
+      }
+      
   }
 
   return (
@@ -261,7 +347,7 @@ const UploadForm = () => {
           {/* Voice Selector */}
                   <FormField
                       control={form.control}
-                      name="voiceId"
+                      name="persona"
                       render={({ field }) => (
                           <FormItem>
                               <FormLabel className="form-label">Choose Assistant Voice</FormLabel>
