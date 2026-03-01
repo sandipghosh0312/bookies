@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]) {
 // Serialize Mongoose documents to plain JSON objects (strips ObjectId, Date, etc.)
 export const serializeData = <T>(data: T): T => JSON.parse(JSON.stringify(data));
 
-// Auto generate slug
+// Auto generate slug (deterministic - no timestamp)
 export function generateSlug(text: string) {
   const maxLength = 80;
 
@@ -29,8 +29,7 @@ export function generateSlug(text: string) {
     .slice(0, maxLength) // Limit length
     .replace(/-$/, ''); // Ensure it doesn’t end with a hyphen after slice
 
-  const uniqueSuffix = Date.now().toString(36);
-  return `${baseSlug}-${uniqueSuffix}`;
+  return baseSlug;
 }
 
 // Escape regex special characters to prevent ReDoS attacks

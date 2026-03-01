@@ -108,6 +108,7 @@ const UploadForm = () => {
 
         if (parsePDF.content.length === 0){
           toast.error("Could not extract any text content from the PDF. Please make sure the PDF is not scanned as an image and try again.");
+          setIsSubmitting(false);
           return;
         }
 

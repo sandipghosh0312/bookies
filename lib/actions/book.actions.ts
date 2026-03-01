@@ -27,9 +27,12 @@ export const checkBookExists = async (title: string) => {
     try {
         await connectToDatabase();
 
-        const slug = generateSlug(title);
+        // Normalize title for consistent comparison (case-insensitive, trimmed)
+        const normalizedTitle = title.trim().toLowerCase();
 
-        const existingBook = await Book.findOne({ slug }).lean();
+        const existingBook = await Book.findOne({
+            title: { $regex: `^${normalizedTitle}$`, $options: 'i' }
+        }).lean();
 
         if (existingBook) {
             return {
@@ -52,9 +55,11 @@ export const createBook = async (data: CreateBook) => {
     try {
         await connectToDatabase();
 
-        const slug = generateSlug(data.title);
-
-        const existingBook = await Book.findOne({ slug }).lean();
+        // Check for existing book by title (case-insensitive, trimmed)
+        const normalizedTitle = data.title.trim().toLowerCase();
+        const existingBook = await Book.findOne({
+            title: { $regex: `^${normalizedTitle}$`, $options: 'i' }
+        }).lean();
 
         if (existingBook) {
             return {
@@ -63,6 +68,9 @@ export const createBook = async (data: CreateBook) => {
                 alreadyExists: true,
             }
         }
+
+        // Generate slug for URL usage
+        const slug = generateSlug(data.title);
 
         // Check subscription limits before creating a book
 
@@ -96,28 +104,45 @@ export const saveBookSegments = async (bookId: string, clerkId: string, segments
             wordCount
         }));
 
-        await BookSegment.insertMany(segmentsToInsert);
+        // Track if segments were actually inserted so we know what to clean up
+        let segmentsInserted = false;
 
-        await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length });
-
-        return {
-            success: true,
-            data: { segmentsInserted: segments.length },
+        try {
+            await BookSegment.insertMany(segmentsToInsert);
+            segmentsInserted = true;
+        } catch (insertError) {
+            // Segment insertion failed - don't delete the book, just fail
+            console.error("Error inserting book segments", insertError);
+            throw insertError;
         }
 
-        await BookSegment.insertMany(segmentsToInsert);
+        try {
+            const updatedBook = await Book.findByIdAndUpdate(
+                bookId, 
+                { totalSegments: segments.length }, 
+                { new: true }
+            );
 
-        const updatedBook = await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length }, { new: true });
-
-        return {
-            success: true,
-            data: serializeData(updatedBook),
+            return {
+                success: true,
+                data: serializeData(updatedBook),
+            }
+        } catch (updateError) {
+            // Book update failed - clean up segments we inserted in this operation
+            console.error("Error updating book segment count", updateError);
+            if (segmentsInserted) {
+                try {
+                    await BookSegment.deleteMany({ bookId });
+                } catch (cleanupError) {
+                    console.error("Error cleaning up segments after update failure", cleanupError);
+                    // Log but don't mask the original error
+                }
+            }
+            throw updateError;
         }
     } catch (error) {
         console.error("Error saving book segments", error);
 
-        await BookSegment.deleteMany({ bookId });
-        await Book.findByIdAndDelete(bookId);
         return {
             success: false,
             error: error,
