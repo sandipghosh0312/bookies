@@ -119,6 +119,7 @@ const UploadForm = () => {
         })
 
         let coverUrl: string;
+        let coverBlobKey: string = '';
         if (data.coverImage) {
           const coverFile = data.coverImage;
           const uploadCoverBlob = await upload(`${FileTitle}-cover.png`, coverFile, {
@@ -127,6 +128,7 @@ const UploadForm = () => {
             contentType: coverFile.type,
           })
           coverUrl = uploadCoverBlob.url;
+          coverBlobKey = uploadCoverBlob.pathname;
         } else {
           const response = await fetch(parsePDF.cover);
           const blob = await response.blob();
@@ -136,6 +138,7 @@ const UploadForm = () => {
             contentType: 'image/png',
           })
           coverUrl = uploadCoverBlob.url;
+          coverBlobKey = uploadCoverBlob.pathname;
         }
 
         const book = await createBook({
@@ -146,6 +149,7 @@ const UploadForm = () => {
           fileURL: uploadPDFBlob.url,
           fileBlobKey: uploadPDFBlob.pathname,
           coverURL: coverUrl,
+          coverBlobKey: coverBlobKey,
           fileSize: pdfFile.size,
         })
 
@@ -158,17 +162,40 @@ const UploadForm = () => {
           return;
         }
 
-        const segments = await saveBookSegments(book.data._id, userId, parsePDF.content);
+        console.log(`\n========== [SEGMENT BATCH SAVING START] ==========`);
+        console.log(`Book created: ${book.data._id}`);
+        console.log(`Total segments to save: ${parsePDF.content.length}`);
+        
+        // Save segments in batches to avoid body size limit
+        const batchSize = 100;
+        let totalSegmentsSaved = 0;
+        
+        for (let i = 0; i < parsePDF.content.length; i += batchSize) {
+          const batch = parsePDF.content.slice(i, i + batchSize);
+          const batchNum = Math.floor(i / batchSize) + 1;
+          
+          console.log(`\n>>> Batch ${batchNum}: Sending ${batch.length} segments (indices ${batch[0]?.segmentIndex}-${batch[batch.length - 1]?.segmentIndex})`);
+          
+          const segments = await saveBookSegments(book.data._id, userId, batch);
 
-        if (!segments.success) {
-          toast.error("Could not save your book segments");
-          throw new Error("Could not save book segments");
+          if (!segments.success) {
+            console.error(`✗ Batch ${batchNum} failed:`, segments.error);
+            toast.error(`Could not save segment batch ${batchNum}: ${segments.error}`);
+            throw new Error("Could not save book segments");
+          }
+          
+          totalSegmentsSaved += batch.length;
+          console.log(`✓ Batch ${batchNum} complete. Total saved so far: ${totalSegmentsSaved}`);
         }
 
+        console.log(`\n✓ ========== [ALL SEGMENTS SAVED: ${totalSegmentsSaved}] ==========\n`);
+        toast.success("Book uploaded successfully!");
         form.reset();
         router.push("/");
       } catch (error) {
-        toast.error("Could not process your book")
+        console.error("Upload error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Could not process your book";
+        toast.error(errorMessage);
       } finally {
         setIsSubmitting(false)
       }

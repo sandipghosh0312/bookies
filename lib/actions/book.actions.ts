@@ -108,6 +108,7 @@ export const createBook = async (data: CreateBook) => {
             totalSegments: 0,
         })
 
+        console.log(`[createBook] Book created successfully with _id: ${book._id}`);
 
         revalidatePath("/")
 
@@ -126,8 +127,29 @@ export const createBook = async (data: CreateBook) => {
 
 export const saveBookSegments = async (bookId: string, clerkId: string, segments: TextSegment[]) => {
     try {
+        console.log(`\n========== [saveBookSegments START] ==========`);
+        console.log(`bookId: ${bookId}`);
+        console.log(`clerkId: ${clerkId}`);
+        console.log(`segments.length: ${segments.length}`);
+        
+        if (segments.length === 0) {
+            console.log(`ERROR: No segments provided!`);
+            return {
+                success: false,
+                error: "No segments provided",
+            }
+        }
+        
+        console.log(`Segment 0 keys:`, Object.keys(segments[0]));
+        console.log(`Segment 0 text length:`, segments[0].text?.length);
+        console.log(`Segment 0 segmentIndex:`, segments[0].segmentIndex);
+        
         await connectToDatabase();
+        console.log(`Database connected`);
+        
         const bookObjectId = new mongoose.Types.ObjectId(bookId);
+        console.log(`ObjectId created: ${bookObjectId}`);
+        
         const segmentsToInsert = segments.map(({text, segmentIndex, pageNumber, wordCount}) => ({
             bookId: bookObjectId,
             clerkId,
@@ -137,44 +159,49 @@ export const saveBookSegments = async (bookId: string, clerkId: string, segments
             wordCount
         }));
 
-        // Track if segments were actually inserted so we know what to clean up
+        console.log(`Prepared ${segmentsToInsert.length} segments for insertion`);
+
         let segmentsInserted = false;
 
         try {
-            await BookSegment.insertMany(segmentsToInsert);
+            console.log(`Calling BookSegment.insertMany...`);
+            const result = await BookSegment.insertMany(segmentsToInsert);
+            console.log(`✓ Successfully inserted ${result.length} segments`);
             segmentsInserted = true;
         } catch (insertError) {
-            // Segment insertion failed - don't delete the book, just fail
-            console.error("Error inserting book segments", insertError);
+            console.error(`✗ BookSegment.insertMany failed:`, insertError);
             throw insertError;
         }
 
         try {
+            console.log(`Updating book totalSegments...`);
             const updatedBook = await Book.findByIdAndUpdate(
                 bookId, 
-                { totalSegments: segments.length }, 
+                { $inc: { totalSegments: segments.length } }, 
                 { new: true }
             );
 
+            console.log(`✓ Book updated. Total segments: ${updatedBook?.totalSegments}`);
+            console.log(`========== [saveBookSegments SUCCESS] ==========\n`);
+            
             return {
                 success: true,
                 data: serializeData(updatedBook),
             }
         } catch (updateError) {
-            // Book update failed - clean up segments we inserted in this operation
-            console.error("Error updating book segment count", updateError);
+            console.error(`✗ Book update failed:`, updateError);
             if (segmentsInserted) {
                 try {
-                    await BookSegment.deleteMany({ bookId });
+                    await BookSegment.deleteMany({ bookId: bookObjectId });
+                    console.log(`Cleaned up inserted segments`);
                 } catch (cleanupError) {
-                    console.error("Error cleaning up segments after update failure", cleanupError);
-                    // Log but don't mask the original error
+                    console.error("Error cleaning up segments", cleanupError);
                 }
             }
             throw updateError;
         }
     } catch (error) {
-        console.error("Error saving book segments", error);
+        console.error(`✗ [saveBookSegments FAILED]`, error);
 
         return {
             success: false,
