@@ -1,11 +1,7 @@
 'use client';
-
-// Create hooks/useVapi.ts: the core hook. Initializes Vapi SDK, manages call lifecycle (idle, connecting, starting, listening, thinking, speaking), tracks messages array + currentMessage streaming, handles duration timer with maxDuration enforcement, session tracking via server actions
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Vapi from '@vapi-ai/web';
 import { useAuth } from '@clerk/nextjs';
-
 import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from '@/constants';
 import { getVoice } from '@/lib/utils';
 import { IBook, Messages } from '@/types';
