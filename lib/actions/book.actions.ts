@@ -127,8 +127,9 @@ export const createBook = async (data: CreateBook) => {
 export const saveBookSegments = async (bookId: string, clerkId: string, segments: TextSegment[]) => {
     try {
         await connectToDatabase();
+        const bookObjectId = new mongoose.Types.ObjectId(bookId);
         const segmentsToInsert = segments.map(({text, segmentIndex, pageNumber, wordCount}) => ({
-            bookId,
+            bookId: bookObjectId,
             clerkId,
             content: text,
             segmentIndex,
