@@ -144,7 +144,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
               <div className="w-full max-w-xs">
                 <select
                   id="voice-select"
-                  className="w-full rounded-lg border border-(--border-subtle) bg-white px-3 py-2 text-sm text-[#212a3b] shadow-soft-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
+                  className="w-full rounded-lg border border-(--border-subtle) bg-white px-3 py-2 text-sm text-[#212a3b] shadow-soft-sm focus:outline-none focus:ring-2 focus:ring-(--accent-warm)"
                   value={selectedVoice}
                   onChange={(e) => setSelectedVoice(e.target.value)}
                 >

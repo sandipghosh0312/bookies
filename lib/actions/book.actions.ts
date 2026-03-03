@@ -110,7 +110,7 @@ export const createBook = async (data: CreateBook) => {
         }
 
         // Enforce subscription limits before creating a new book
-        const limitsCheck = await canCreateMoreBooks(data.clerkId);
+        const limitsCheck = await canCreateMoreBooks();
 
         if (!limitsCheck.allowed) {
             return {

@@ -8,13 +8,14 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = {
   searchParams ?: Promise <{
-    q?: string
+    q?: string | string[]
   }>
 }
 
 const page = async ({ searchParams }: PageProps) => {
   const params = await searchParams;
-  const searchQuery = params?.q ?? "";
+  const rawQ = params?.q;
+  const searchQuery = Array.isArray(rawQ) ? (rawQ[0] ?? "") : (rawQ ?? "");
 
   const bookResults = await getAllBooks(searchQuery);
   const books = bookResults.success ? bookResults.data ?? [] : [];

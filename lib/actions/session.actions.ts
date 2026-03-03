@@ -12,7 +12,7 @@ export const startVoiceSession = async (
     try {
         await connectToDatabase();
 
-        const limitsCheck = await canStartNewSessionThisPeriod(clerkId);
+        const limitsCheck = await canStartNewSessionThisPeriod();
 
         if (!limitsCheck.allowed) {
             return {
