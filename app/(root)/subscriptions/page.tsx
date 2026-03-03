@@ -4,7 +4,7 @@ import { PricingTable } from '@clerk/nextjs';
 import { useSubscription } from '@/hooks/useSubscription';
 
 const SubscriptionsPage = () => {
-  const { plan, limits } = useSubscription();
+  const { isLoaded, plan, limits } = useSubscription();
 
   return (
     <main className="clerk-subscriptions">
@@ -19,15 +19,15 @@ const SubscriptionsPage = () => {
           <span className="text-sm font-semibold text-[var(--text-primary)]">
             Current plan:&nbsp;
             <span className="font-bold">
-              {plan === 'FREE' ? 'Free' : plan === 'STANDARD' ? 'Standard' : 'Pro'}
+              {!isLoaded ? 'Loading…' : plan === 'FREE' ? 'Free' : plan === 'STANDARD' ? 'Standard' : 'Pro'}
             </span>
           </span>
           <span className="hidden sm:inline text-sm text-[var(--text-secondary)]">
-            {limits.maxBooks} books ·{' '}
-            {limits.maxSessionsPerMonth === 'unlimited'
-              ? 'Unlimited sessions'
-              : `${limits.maxSessionsPerMonth} sessions / month`}{' '}
-            · {limits.maxMinutesPerSession} min / session
+            {!isLoaded ? 'Loading limits…'
+              : `${limits.maxBooks} books · ${limits.maxSessionsPerMonth === 'unlimited'
+                     ? 'Unlimited sessions'
+                    : `${limits.maxSessionsPerMonth} sessions / month`
+                } · ${limits.maxMinutesPerSession} min / session`}
           </span>
         </div>
       </section>

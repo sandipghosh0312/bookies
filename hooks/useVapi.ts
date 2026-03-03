@@ -76,8 +76,14 @@ export function useVapi(book: IBook) {
                         setDuration(newDuration);
 
                         // Check duration limit
-                        if (newDuration >= maxDurationRef.current) {
+                        if (newDuration >= maxDurationRef.current && !isStoppingRef.current) {
+                            isStoppingRef.current = true;
+                            if (timerRef.current) {
+                                clearInterval(timerRef.current);
+                                timerRef.current = null;
+                            }
                             getVapi().stop();
+        
                             setLimitError(
                                 `Session time limit (${Math.floor(
                                     maxDurationRef.current / SECONDS_PER_MINUTE,

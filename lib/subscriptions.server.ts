@@ -38,7 +38,18 @@ export const getCurrentUserPlanServer = async (): Promise<PlanInfo> => {
   return { plan: "FREE", limits, planSlug: null };
 };
 
-export const canCreateMoreBooks = async (clerkId: string) => {
+export const canCreateMoreBooks = async () => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return {
+      allowed: false,
+      plan: "FREE" as PlanKey,
+      currentCount: 0,
+      limit: 0,
+    };
+  }
+
   const { limits, plan } = await getCurrentUserPlanServer();
 
   if (limits.maxBooks <= 0) {
@@ -50,7 +61,7 @@ export const canCreateMoreBooks = async (clerkId: string) => {
     };
   }
 
-  const currentCount = await Book.countDocuments({ clerkId });
+  const currentCount = await Book.countDocuments({ clerkId: userId });
 
   return {
     allowed: currentCount < limits.maxBooks,
@@ -60,7 +71,19 @@ export const canCreateMoreBooks = async (clerkId: string) => {
   };
 };
 
-export const canStartNewSessionThisPeriod = async (clerkId: string) => {
+export const canStartNewSessionThisPeriod = async () => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return {
+      allowed: false,
+      plan: "FREE" as PlanKey,
+      currentCount: 0,
+      limit: 0,
+      maxDurationMinutes: 0,
+    };
+  }
+
   const { limits, plan } = await getCurrentUserPlanServer();
 
   if (limits.maxSessionsPerMonth === "unlimited") {
@@ -76,7 +99,7 @@ export const canStartNewSessionThisPeriod = async (clerkId: string) => {
   const periodStart = getCurrentBillingPeriodStart();
 
   const currentCount = await VoiceSession.countDocuments({
-    clerkId,
+    clerkId: userId,
     billingPeriodStart: periodStart,
   });
 
@@ -88,4 +111,3 @@ export const canStartNewSessionThisPeriod = async (clerkId: string) => {
     maxDurationMinutes: limits.maxMinutesPerSession,
   };
 };
-

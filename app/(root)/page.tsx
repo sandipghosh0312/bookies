@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button"
 export const dynamic = 'force-dynamic';
 
 type PageProps = {
-  searchParams?: {
+  searchParams ?: Promise <{
     q?: string
-  }
+  }>
 }
 
 const page = async ({ searchParams }: PageProps) => {
-  const searchQuery = searchParams?.q ?? "";
+  const params = await searchParams;
+  const searchQuery = params?.q ?? "";
 
   const bookResults = await getAllBooks(searchQuery);
   const books = bookResults.success ? bookResults.data ?? [] : [];

@@ -35,6 +35,8 @@ const VapiControls = ({ book }: { book: IBook }) => {
     switch (status) {
       case 'connecting':
         return 'vapi-status-dot-connecting'
+      case 'starting':
+        return 'vapi-status-dot-starting'
       case 'listening':
         return 'vapi-status-dot-listening'
       case 'thinking':
@@ -91,9 +93,8 @@ const VapiControls = ({ book }: { book: IBook }) => {
                 <button
                   onClick={isActive ? stop : () => start(selectedVoice)}
                   disabled={status === 'connecting'}
-                  className={`vapi-mic-btn ${
-                    isActive ? 'vapi-mic-btn-active' : 'vapi-mic-btn-inactive'
-                  } shadow-md w-15 h-15 z-10`}
+                  className={`vapi-mic-btn ${isActive ? 'vapi-mic-btn-active' : 'vapi-mic-btn-inactive'
+                    } shadow-md w-15 h-15 z-10`}
                   aria-label={isActive ? 'Stop talking' : 'Start the conversation'}
                   type="button"
                 >
@@ -137,10 +138,13 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
             {/* Voice Selector for this conversation */}
             <div className="mt-2 space-y-3">
-              <p className="text-sm font-medium text-[#777]">Choose voice for this conversation</p>
+              <label htmlFor="voice-select" className="text-sm font-medium text-[`#777`]">
+                Choose voice for this conversation
+              </label>
               <div className="w-full max-w-xs">
                 <select
-                  className="w-full rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[#212a3b] shadow-soft-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
+                  id="voice-select"
+                  className="w-full rounded-lg border border-(--border-subtle) bg-white px-3 py-2 text-sm text-[#212a3b] shadow-soft-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
                   value={selectedVoice}
                   onChange={(e) => setSelectedVoice(e.target.value)}
                 >
@@ -170,9 +174,12 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
             {/* Limit error banner */}
             {limitError && (
-              <div className="warning-banner" role="alert" onClick={clearError}>
+              <div className="warning-banner" role="alert">
                 <div className="warning-banner-content">
                   <span className="warning-banner-text">{limitError}</span>
+                  <button type="button" onClick={clearError} className="ml-3 underline">
+                    Dismiss
+                  </button>
                 </div>
               </div>
             )}
