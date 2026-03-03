@@ -1,4 +1,10 @@
 import UploadForm from "@/components/UploadForm"
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Add a new book | Bookies",
+  description: "Transform your reading into a conversation with Bookies, the AI-powered book companion. Ask questions, get insights, and explore your books like never before.",
+};
 
 const page = () => {
   return (

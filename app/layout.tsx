@@ -21,6 +21,9 @@ const monaSans = Mona_Sans({
 export const metadata: Metadata = {
   title: "Bookies",
   description: "Transform your reading into a conversation with Bookies, the AI-powered book companion. Ask questions, get insights, and explore your books like never before.",
+  icons: {
+    icon: "public/assets/image.png",
+  },
 };
 
 export default function RootLayout({
