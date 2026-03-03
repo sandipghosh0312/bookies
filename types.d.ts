@@ -15,7 +15,6 @@ export interface IBook extends Document {
     title: string;
     slug: string;
     author: string;
-    persona?: string;
     fileURL: string;
     fileBlobKey: string;
     coverURL?: string;
@@ -59,7 +58,6 @@ export interface CreateBook {
     clerkId: string;
     title: string;
     author: string;
-    persona?: string;
     fileURL: string;
     fileBlobKey: string;
     coverURL?: string;
@@ -91,13 +89,6 @@ export interface ShadowBoxProps {
     className?: string;
 }
 
-export interface VoiceSelectorProps {
-    disabled?: boolean;
-    className?: string;
-    value?: string;
-    onChange: (voiceId: string) => void;
-}
-
 export interface InputFieldProps<T extends FieldValues> {
     control: Control<T>;
     name: FieldPath<T>;
@@ -117,7 +108,7 @@ export interface FileUploadFieldProps<T extends FieldValues> {
     hint: string;
 }
 
-import { PLANS, PlanType } from "@/lib/subscription-constants";
+import { PLANS, PlanType } from "@/lib/subscriptions-constants";
 
 export interface StartSessionResult {
     success: boolean;

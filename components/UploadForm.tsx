@@ -8,7 +8,6 @@ import { Upload, Image as ImageIcon, X } from 'lucide-react'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import VoiceSelector from './VoiceSelector'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
 import { checkBookExists, createBook, saveBookSegments } from '@/lib/actions/book.actions'
@@ -145,7 +144,6 @@ const UploadForm = () => {
           clerkId: userId,
           title: data.title,
           author: data.author,
-          persona: data.persona,
           fileURL: uploadPDFBlob.url,
           fileBlobKey: uploadPDFBlob.pathname,
           coverURL: coverUrl,
@@ -371,24 +369,6 @@ const UploadForm = () => {
             )}
           />
 
-          {/* Voice Selector */}
-                  <FormField
-                      control={form.control}
-                      name="persona"
-                      render={({ field }) => (
-                          <FormItem>
-                              <FormLabel className="form-label">Choose Assistant Voice</FormLabel>
-                              <FormControl>
-                                  <VoiceSelector
-                                      value={field.value}
-                                      onChange={field.onChange}
-                                      disabled={isSubmitting}
-                                  />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )}
-                  />
 
           {/* Submit Button */}
           <Button

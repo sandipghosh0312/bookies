@@ -1,4 +1,4 @@
-"use server"
+'use server'
 import { connectToDatabase } from "@/database/mongoose";
 import { CreateBook, TextSegment } from "@/types";
 import { escapeRegex, generateSlug, serializeData } from "../utils";
@@ -6,6 +6,7 @@ import Book from "@/database/models/book.model";
 import BookSegment from "@/database/models/book-segment.model";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
+import { canCreateMoreBooks } from "../subscriptions.server";
 
 export const getBookBySlug = async (slug: string) => {
     try {
@@ -33,11 +34,22 @@ export const getBookBySlug = async (slug: string) => {
     }
 }
 
-export const getAllBooks = async () => {
+export const getAllBooks = async (query?: string | null) => {
     try {
         await connectToDatabase();
 
-        const books = await Book.find().sort({ createdAt: -1 }).lean();
+        const filter: Record<string, unknown> = {};
+
+        if (query && query.trim()) {
+            const pattern = escapeRegex(query.trim());
+
+            filter.$or = [
+                { title: { $regex: pattern, $options: "i" } },
+                { author: { $regex: pattern, $options: "i" } },
+            ];
+        }
+
+        const books = await Book.find(filter).sort({ createdAt: -1 }).lean();
 
         return {
             success: true,
@@ -97,10 +109,22 @@ export const createBook = async (data: CreateBook) => {
             }
         }
 
+        // Enforce subscription limits before creating a new book
+        const limitsCheck = await canCreateMoreBooks();
+
+        if (!limitsCheck.allowed) {
+            return {
+                success: false,
+                data: null,
+                error:
+                    limitsCheck.plan === 'FREE'
+                        ? 'Free plan limit reached. You can only upload 1 book. Upgrade your plan to add more books.'
+                        : `Plan limit reached. You can upload up to ${limitsCheck.limit} books on your current plan.`,
+            };
+        }
+
         // Generate slug for URL usage
         const slug = generateSlug(data.title);
-
-        // Check subscription limits before creating a book
 
         const book = await Book.create({
             ...data,
