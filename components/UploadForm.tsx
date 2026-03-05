@@ -27,9 +27,8 @@ const formSchema = z.object({
   coverImage: z.instanceof(File).optional().nullable(),
   title: z.string().min(1, 'Title is required').min(3, 'Title must be at least 3 characters'),
   author: z.string().min(1, 'Author is required').min(3, 'Author must be at least 3 characters'),
-  persona: z.string().min(1, 'Voice selection is required'),
 
-  length: z.int64().optional().nullable(),
+  length: z.number().int().optional().nullable(),
 })
 
 type FormData = z.infer<typeof formSchema>
